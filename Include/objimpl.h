@@ -111,45 +111,6 @@ PyAPI_FUNC(void) PyObject_Free(void *ptr);
 
 
 /*
- * Generic object allocator interface
- * ==================================
- */
-
-/* Functions */
-PyAPI_FUNC(PyObject *) PyObject_Init(PyObject *, PyTypeObject *);
-PyAPI_FUNC(PyVarObject *) PyObject_InitVar(PyVarObject *,
-                                                 PyTypeObject *, Py_ssize_t);
-PyAPI_FUNC(PyObject *) _PyObject_New(PyTypeObject *);
-PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, Py_ssize_t);
-
-#define PyObject_New(type, typeobj) ((type *)_PyObject_New(typeobj))
-
-// Alias to PyObject_New(). In Python 3.8, PyObject_NEW() called directly
-// PyObject_MALLOC() with _PyObject_SIZE().
-#define PyObject_NEW(type, typeobj) PyObject_New(type, typeobj)
-
-#define PyObject_NewVar(type, typeobj, n) \
-                ( (type *) _PyObject_NewVar((typeobj), (n)) )
-
-// Alias to PyObject_New(). In Python 3.8, PyObject_NEW() called directly
-// PyObject_MALLOC() with _PyObject_VAR_SIZE().
-#define PyObject_NEW_VAR(type, typeobj, n) PyObject_NewVar(type, typeobj, n)
-
-
-#ifdef Py_LIMITED_API
-/* Define PyObject_INIT() and PyObject_INIT_VAR() as aliases to PyObject_Init()
-   and PyObject_InitVar() in the limited C API for compatibility with the
-   CPython C API. */
-#  define PyObject_INIT(op, typeobj) \
-        PyObject_Init(_PyObject_CAST(op), (typeobj))
-#  define PyObject_INIT_VAR(op, typeobj, size) \
-        PyObject_InitVar(_PyVarObject_CAST(op), (typeobj), (size))
-#else
-/* PyObject_INIT() and PyObject_INIT_VAR() are defined in cpython/objimpl.h */
-#endif
-
-
-/*
  * Garbage Collection Support
  * ==========================
  */
@@ -158,7 +119,7 @@ PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, Py_ssize_t);
 PyAPI_FUNC(Py_ssize_t) PyGC_Collect(void);
 
 /* Test if a type has a GC head */
-#define PyType_IS_GC(t) PyType_HasFeature((t), Py_TPFLAGS_HAVE_GC)
+#define PyType_IS_GC(t) (0)
 
 PyAPI_FUNC(PyVarObject *) _PyObject_GC_Resize(PyVarObject *, Py_ssize_t);
 #define PyObject_GC_Resize(type, op, n) \
@@ -186,8 +147,6 @@ PyAPI_FUNC(void) PyObject_GC_Del(void *);
 #define PyObject_GC_NewVar(type, typeobj, n) \
                 ( (type *) _PyObject_GC_NewVar((typeobj), (n)) )
 
-PyAPI_FUNC(int) PyObject_GC_IsTracked(PyObject *);
-PyAPI_FUNC(int) PyObject_GC_IsFinalized(PyObject *);
 
 /* Utility macro to help write tp_traverse functions.
  * To use this macro, the tp_traverse function must name its arguments
@@ -203,10 +162,70 @@ PyAPI_FUNC(int) PyObject_GC_IsFinalized(PyObject *);
         }                                                               \
     } while (0)
 
+/*
+ * Generic object allocator interface
+ * ==================================
+ */
+
+/* Functions */
+PyAPI_FUNC(PyObject *) PyObject_Init(PyObject *, PyTypeObject *);
+PyAPI_FUNC(PyVarObject *) PyObject_InitVar(PyVarObject *,
+                                                 PyTypeObject *, Py_ssize_t);
+PyAPI_FUNC(PyObject *) _PyObject_New(PyTypeObject *);
+PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, Py_ssize_t);
+
+#define PyObject_New(type, typeobj) ((type *)_PyObject_New(typeobj))
+
+// Alias to PyObject_New(). In Python 3.8, PyObject_NEW() called directly
+// PyObject_MALLOC() with _PyObject_SIZE().
+#define PyObject_NEW(type, typeobj) PyObject_New(type, typeobj)
+
+#define PyObject_NewVar(type, typeobj, n) \
+                ( (type *) _PyObject_NewVar((typeobj), (n)) )
+
 #ifndef Py_LIMITED_API
 #  define Py_CPYTHON_OBJIMPL_H
 #  include  "cpython/objimpl.h"
 #  undef Py_CPYTHON_OBJIMPL_H
+#endif
+
+/* Potentially register a finalizer. Call when creating the object, when
+ * tp_finalize/tp_del are changed, a first weakref is added or a last
+ * weakref is removed. */
+static inline void
+_PyObject_ReconsiderFinalizer(PyObject *op)
+{
+    if (!GC_is_heap_ptr(op))
+        return;
+    /* Assume tp_dealloc is only used to clear refs (unnecessary when using
+     * libgc), call weakref callbacks, and/or call tp_del/tp_finalize, so
+     * register a finalizer if we may need to do the latter two of
+     * those, and remove it if we don't. */
+    if (Py_TYPE(op)->tp_finalize != NULL ||
+        Py_TYPE(op)->tp_del != NULL ||
+        (Py_TYPE(op)->tp_weaklistoffset != 0 &&
+         _Py_REVEAL_POINTER(PyObject_GET_WEAKREFS_LISTPTR(op)) != NULL)) {
+        GC_REGISTER_FINALIZER(op, _Py_Dealloc_finalizer, NULL, NULL, NULL);
+    } else {
+        GC_REGISTER_FINALIZER(op, NULL, NULL, NULL, NULL);
+    }
+}
+
+// Alias to PyObject_New(). In Python 3.8, PyObject_NEW() called directly
+// PyObject_MALLOC() with _PyObject_VAR_SIZE().
+#define PyObject_NEW_VAR(type, typeobj, n) PyObject_NewVar(type, typeobj, n)
+
+
+#ifdef Py_LIMITED_API
+/* Define PyObject_INIT() and PyObject_INIT_VAR() as aliases to PyObject_Init()
+   and PyObject_InitVar() in the limited C API for compatibility with the
+   CPython C API. */
+#  define PyObject_INIT(op, typeobj) \
+        PyObject_Init(_PyObject_CAST(op), (typeobj))
+#  define PyObject_INIT_VAR(op, typeobj, size) \
+        PyObject_InitVar(_PyVarObject_CAST(op), (typeobj), (size))
+#else
+/* PyObject_INIT() and PyObject_INIT_VAR() are defined in cpython/objimpl.h */
 #endif
 
 #ifdef __cplusplus

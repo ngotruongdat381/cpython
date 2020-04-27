@@ -27,23 +27,7 @@ PyAPI_FUNC(int) _PyDict_CheckConsistency(PyObject *mp, int check_content);
 static inline void _PyObject_GC_TRACK_impl(const char *filename, int lineno,
                                            PyObject *op)
 {
-    _PyObject_ASSERT_FROM(op, !_PyObject_GC_IS_TRACKED(op),
-                          "object already tracked by the garbage collector",
-                          filename, lineno, "_PyObject_GC_TRACK");
-
-    PyGC_Head *gc = _Py_AS_GC(op);
-    _PyObject_ASSERT_FROM(op,
-                          (gc->_gc_prev & _PyGC_PREV_MASK_COLLECTING) == 0,
-                          "object is in generation which is garbage collected",
-                          filename, lineno, "_PyObject_GC_TRACK");
-
-    PyThreadState *tstate = _PyThreadState_GET();
-    PyGC_Head *generation0 = tstate->interp->gc.generation0;
-    PyGC_Head *last = (PyGC_Head*)(generation0->_gc_prev);
-    _PyGCHead_SET_NEXT(last, gc);
-    _PyGCHead_SET_PREV(gc, last);
-    _PyGCHead_SET_NEXT(gc, generation0);
-    generation0->_gc_prev = (uintptr_t)gc;
+    return;
 }
 
 #define _PyObject_GC_TRACK(op) \
@@ -61,17 +45,7 @@ static inline void _PyObject_GC_TRACK_impl(const char *filename, int lineno,
 static inline void _PyObject_GC_UNTRACK_impl(const char *filename, int lineno,
                                              PyObject *op)
 {
-    _PyObject_ASSERT_FROM(op, _PyObject_GC_IS_TRACKED(op),
-                          "object not tracked by the garbage collector",
-                          filename, lineno, "_PyObject_GC_UNTRACK");
-
-    PyGC_Head *gc = _Py_AS_GC(op);
-    PyGC_Head *prev = _PyGCHead_PREV(gc);
-    PyGC_Head *next = _PyGCHead_NEXT(gc);
-    _PyGCHead_SET_NEXT(prev, next);
-    _PyGCHead_SET_PREV(next, prev);
-    gc->_gc_next = 0;
-    gc->_gc_prev &= _PyGC_PREV_MASK_FINALIZED;
+    return;
 }
 
 #define _PyObject_GC_UNTRACK(op) \
@@ -86,13 +60,6 @@ extern void _Py_AddToAllObjects(PyObject *op, int force);
 extern void _Py_PrintReferences(FILE *);
 extern void _Py_PrintReferenceAddresses(FILE *);
 #endif
-
-static inline PyObject **
-_PyObject_GET_WEAKREFS_LISTPTR(PyObject *op)
-{
-    Py_ssize_t offset = Py_TYPE(op)->tp_weaklistoffset;
-    return (PyObject **)((char *)op + offset);
-}
 
 // Fast inlined version of PyType_HasFeature()
 static inline int

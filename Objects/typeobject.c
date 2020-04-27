@@ -1276,10 +1276,10 @@ subtype_dealloc(PyObject *self)
            being finalized that has already been destroyed. */
         if (type->tp_weaklistoffset && !base->tp_weaklistoffset) {
             /* Modeled after GET_WEAKREFS_LISTPTR() */
-            PyWeakReference **list = (PyWeakReference **) \
-                _PyObject_GET_WEAKREFS_LISTPTR(self);
-            while (*list)
-                _PyWeakref_ClearRef(*list);
+            GC_hidden_pointer *list = PyObject_GET_WEAKREFS_LISTPTR(self);
+            PyWeakReference *wr;
+            while ((wr = GC_REVEAL_POINTER(*list)) != NULL)
+                _PyWeakref_ClearRef(wr);
         }
     }
 
@@ -2211,7 +2211,7 @@ subtype_setdict(PyObject *obj, PyObject *value, void *context)
 static PyObject *
 subtype_getweakref(PyObject *obj, void *context)
 {
-    PyObject **weaklistptr;
+    GC_hidden_pointer *weaklistptr;
     PyObject *result;
     PyTypeObject *type = Py_TYPE(obj);
 
@@ -2225,11 +2225,10 @@ subtype_getweakref(PyObject *obj, void *context)
     _PyObject_ASSERT((PyObject *)type,
                      ((type->tp_weaklistoffset + sizeof(PyObject *))
                       <= (size_t)(type->tp_basicsize)));
-    weaklistptr = (PyObject **)((char *)obj + type->tp_weaklistoffset);
-    if (*weaklistptr == NULL)
+    weaklistptr = PyObject_GET_WEAKREFS_LISTPTR(obj);
+    result = GC_REVEAL_POINTER(*weaklistptr);
+    if (result == NULL)
         result = Py_None;
-    else
-        result = *weaklistptr;
     Py_INCREF(result);
     return result;
 }

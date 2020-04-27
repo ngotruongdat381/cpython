@@ -121,9 +121,7 @@ PyAPI_FUNC(Py_ssize_t) _PyGC_CollectIfEnabled(void);
 
 
 /* Test if an object has a GC head */
-#define PyObject_IS_GC(o) \
-    (PyType_IS_GC(Py_TYPE(o)) \
-     && (Py_TYPE(o)->tp_is_gc == NULL || Py_TYPE(o)->tp_is_gc(o)))
+#define PyObject_IS_GC(o) (0)
 
 /* GC information is stored BEFORE the object structure. */
 typedef struct {
@@ -137,9 +135,10 @@ typedef struct {
 } PyGC_Head;
 
 #define _Py_AS_GC(o) ((PyGC_Head *)(o)-1)
+#define _Py_FROM_GC(o) ((PyObject *)((PyGC_Head *)(o)+1))
 
 /* True if the object is currently tracked by the GC. */
-#define _PyObject_GC_IS_TRACKED(o) (_Py_AS_GC(o)->_gc_next != 0)
+#define _PyObject_GC_IS_TRACKED(o) (0)
 
 /* True if the object may be tracked by the GC in the future, or already is.
    This can be useful to implement some optimizations. */
@@ -188,7 +187,15 @@ PyAPI_FUNC(PyObject *) _PyObject_GC_Calloc(size_t size);
 /* Test if a type supports weak references */
 #define PyType_SUPPORTS_WEAKREFS(t) ((t)->tp_weaklistoffset > 0)
 
-PyAPI_FUNC(PyObject **) PyObject_GET_WEAKREFS_LISTPTR(PyObject *op);
+#define PyObject_GET_WEAKREFS_LISTPTR(o) \
+    ((PyObject **) (((char *) (o)) + Py_TYPE(o)->tp_weaklistoffset))
+    ((GC_hidden_pointer *) (((char *) (o)) + Py_TYPE(o)->tp_weaklistoffset))
+
+#define _Py_HIDE_POINTER(p) \
+    ((GC_hidden_pointer)((p) == NULL ? 0 : GC_HIDE_POINTER(p)))
+
+#define _Py_REVEAL_POINTER(p) \
+    ((PyObject *)((p) == 0 ? NULL : GC_REVEAL_POINTER(p)))
 
 #ifdef __cplusplus
 }
