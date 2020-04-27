@@ -90,7 +90,8 @@ clear_weakref(PyWeakReference *self)
         if (ref != NULL)
             ref->wr_prev = self->wr_prev;
         self->wr_prev = 0;
-
+        self->wr_next = 0;
+        _PyObject_ReconsiderFinalizer(ob);
     }
     if (callback != NULL) {
         Py_DECREF(callback);
@@ -194,7 +195,7 @@ weakref_repr(PyWeakReference *self)
     }
 
     Py_INCREF(obj);
-    if (_PyObject_LookupAttrId(obj, &PyId___name__, &name) < 0) {
+    if (_PyObject_LookupAttrId(PyWeakref_GET_OBJECT(obj), &PyId___name__, &name) < 0) {
         Py_DECREF(obj);
         return NULL;
     }
@@ -361,6 +362,7 @@ weakref___new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
                 else
                     insert_after(self, prev);
             }
+            _PyObject_ReconsiderFinalizer(ob);
         }
     }
     return (PyObject *)self;
@@ -869,6 +871,7 @@ PyWeakref_NewRef(PyObject *ob, PyObject *callback)
                 else
                     insert_after(result, prev);
             }
+            _PyObject_ReconsiderFinalizer(ob);
         }
     }
     return (PyObject *) result;
@@ -934,6 +937,7 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
                 insert_head(result, list);
             else
                 insert_after(result, prev);
+            _PyObject_ReconsiderFinalizer(ob);
         skip_insert:
             ;
         }
