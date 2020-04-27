@@ -2232,7 +2232,7 @@ _Py_Dealloc_finalizer(void *_op, void *is_gc)
     PyObject *op = (PyObject *)_op;
     assert(is_gc == NULL ? !PyObject_IS_GC(op) : PyObject_IS_GC(op));
     if (op->ob_refcnt != 0) {
-        fprintf(stderr, "object %p refcount leak (%ld)\n", op, op->ob_refcnt);
+        // fprintf(stderr, "object %p refcount leak (%ld)\n", op, op->ob_refcnt);
         return;
     }
     _GC_Py_Dealloc(op);

@@ -1,5 +1,4 @@
 #include "Python.h"
-#include "pycore_object.h"   // _PyObject_GET_WEAKREFS_LISTPTR
 #include "structmember.h"
 
 #define GET_NEXT(o) ((PyWeakReference *)_Py_REVEAL_POINTER((o)->wr_next))
@@ -195,7 +194,7 @@ weakref_repr(PyWeakReference *self)
     }
 
     Py_INCREF(obj);
-    if (_PyObject_LookupAttrId(PyWeakref_GET_OBJECT(obj), &PyId___name__, &name) < 0) {
+    if (_PyObject_LookupAttrId(obj, &PyId___name__, &name) < 0) {
         Py_DECREF(obj);
         return NULL;
     }
