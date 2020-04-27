@@ -1460,6 +1460,7 @@ static Py_ssize_t
 gc_collect_impl(PyObject *module, int generation)
 /*[clinic end generated code: output=b697e633043233c7 input=40720128b682d879]*/
 {
+    GC_gcollect();
     PyThreadState *tstate = _PyThreadState_GET();
 
     if (generation < 0 || generation >= NUM_GENERATIONS) {
