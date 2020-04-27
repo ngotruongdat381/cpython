@@ -2233,9 +2233,27 @@ _Py_Dealloc_finalizer(void *_op, void *is_gc)
     assert(is_gc == NULL ? !PyObject_IS_GC(op) : PyObject_IS_GC(op));
     if (op->ob_refcnt != 0) {
         // fprintf(stderr, "object %p refcount leak (%ld)\n", op, op->ob_refcnt);
-        return;
     }
     _GC_Py_Dealloc(op);
+}
+
+void
+_PyObject_ReconsiderFinalizer(PyObject *op)
+{
+    if (!GC_is_heap_ptr(op))
+        return;
+    /* Assume tp_dealloc is only used to clear refs (unnecessary when using
+     * libgc), call weakref callbacks, and/or call tp_del/tp_finalize, so
+     * register a finalizer if we may need to do the latter two of
+     * those, and remove it if we don't. */
+    if (Py_TYPE(op)->tp_finalize != NULL ||
+        Py_TYPE(op)->tp_del != NULL ||
+        (Py_TYPE(op)->tp_weaklistoffset != 0 &&
+         _Py_REVEAL_POINTER(PyObject_GET_WEAKREFS_LISTPTR(op)) != NULL)) {
+        GC_REGISTER_FINALIZER(op, _Py_Dealloc_finalizer, NULL, NULL, NULL);
+    } else {
+        GC_REGISTER_FINALIZER(op, NULL, NULL, NULL, NULL);
+    }
 }
 
 #ifdef __cplusplus

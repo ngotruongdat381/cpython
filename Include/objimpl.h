@@ -173,6 +173,10 @@ PyAPI_FUNC(PyVarObject *) PyObject_InitVar(PyVarObject *,
                                                  PyTypeObject *, Py_ssize_t);
 PyAPI_FUNC(PyObject *) _PyObject_New(PyTypeObject *);
 PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, Py_ssize_t);
+/* Potentially register a finalizer. Call when creating the object, when
+ * tp_finalize/tp_del are changed, a first weakref is added or a last
+ * weakref is removed. */
+PyAPI_FUNC(void) _PyObject_ReconsiderFinalizer(PyObject *);
 
 #define PyObject_New(type, typeobj) ((type *)_PyObject_New(typeobj))
 
@@ -188,28 +192,6 @@ PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, Py_ssize_t);
 #  include  "cpython/objimpl.h"
 #  undef Py_CPYTHON_OBJIMPL_H
 #endif
-
-/* Potentially register a finalizer. Call when creating the object, when
- * tp_finalize/tp_del are changed, a first weakref is added or a last
- * weakref is removed. */
-static inline void
-_PyObject_ReconsiderFinalizer(PyObject *op)
-{
-    if (!GC_is_heap_ptr(op))
-        return;
-    /* Assume tp_dealloc is only used to clear refs (unnecessary when using
-     * libgc), call weakref callbacks, and/or call tp_del/tp_finalize, so
-     * register a finalizer if we may need to do the latter two of
-     * those, and remove it if we don't. */
-    if (Py_TYPE(op)->tp_finalize != NULL ||
-        Py_TYPE(op)->tp_del != NULL ||
-        (Py_TYPE(op)->tp_weaklistoffset != 0 &&
-         _Py_REVEAL_POINTER(PyObject_GET_WEAKREFS_LISTPTR(op)) != NULL)) {
-        GC_REGISTER_FINALIZER(op, _Py_Dealloc_finalizer, NULL, NULL, NULL);
-    } else {
-        GC_REGISTER_FINALIZER(op, NULL, NULL, NULL, NULL);
-    }
-}
 
 // Alias to PyObject_New(). In Python 3.8, PyObject_NEW() called directly
 // PyObject_MALLOC() with _PyObject_VAR_SIZE().
