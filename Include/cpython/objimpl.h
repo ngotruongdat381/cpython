@@ -188,7 +188,6 @@ PyAPI_FUNC(PyObject *) _PyObject_GC_Calloc(size_t size);
 #define PyType_SUPPORTS_WEAKREFS(t) ((t)->tp_weaklistoffset > 0)
 
 #define PyObject_GET_WEAKREFS_LISTPTR(o) \
-    ((PyObject **) (((char *) (o)) + Py_TYPE(o)->tp_weaklistoffset))
     ((GC_hidden_pointer *) (((char *) (o)) + Py_TYPE(o)->tp_weaklistoffset))
 
 #define _Py_HIDE_POINTER(p) \

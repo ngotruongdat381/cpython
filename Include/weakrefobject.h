@@ -20,7 +20,6 @@ struct _PyWeakReference {
      * Note that this is a hidden pointer.
      */
     GC_hidden_pointer wr_object;
-    PyObject *wr_object;
 
     /* A callable to invoke when wr_object dies, or NULL if none. */
     PyObject *wr_callback;

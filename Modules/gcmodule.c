@@ -802,9 +802,9 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
              * the callback pointer intact.  Obscure:  it also
              * changes *wrlist.
              */
-            _PyObject_ASSERT((PyObject *)wr, wr->wr_object == op);
+            _PyObject_ASSERT((PyObject *)wr, (PyObject *)wr->wr_object == op);
             _PyWeakref_ClearRef(wr);
-            _PyObject_ASSERT((PyObject *)wr, wr->wr_object == Py_None);
+            _PyObject_ASSERT((PyObject *)wr, (PyObject *)wr->wr_object == Py_None);
             if (wr->wr_callback == NULL) {
                 /* no callback */
                 continue;
@@ -840,7 +840,7 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
              */
             if (gc_is_collecting(AS_GC(wr))) {
                 /* it should already have been cleared above */
-                assert(wr->wr_object == Py_None);
+                assert((PyObject *)wr->wr_object == Py_None);
                 continue;
             }
 
@@ -1391,62 +1391,6 @@ collect_with_callback(PyThreadState *tstate, int generation)
     invoke_gc_callback(tstate, "stop", generation, collected, uncollectable);
     assert(!_PyErr_Occurred(tstate));
     return result;
-}
-
-static Py_ssize_t
-collect_generations(PyThreadState *tstate)
-{
-    GCState *gcstate = &tstate->interp->gc;
-    /* Find the oldest generation (highest numbered) where the count
-     * exceeds the threshold.  Objects in the that generation and
-     * generations younger than it will be collected. */
-    Py_ssize_t n = 0;
-    for (int i = NUM_GENERATIONS-1; i >= 0; i--) {
-        if (gcstate->generations[i].count > gcstate->generations[i].threshold) {
-            /* Avoid quadratic performance degradation in number
-               of tracked objects (see also issue #4074):
-
-               To limit the cost of garbage collection, there are two strategies;
-                 - make each collection faster, e.g. by scanning fewer objects
-                 - do less collections
-               This heuristic is about the latter strategy.
-
-               In addition to the various configurable thresholds, we only trigger a
-               full collection if the ratio
-
-                long_lived_pending / long_lived_total
-
-               is above a given value (hardwired to 25%).
-
-               The reason is that, while "non-full" collections (i.e., collections of
-               the young and middle generations) will always examine roughly the same
-               number of objects -- determined by the aforementioned thresholds --,
-               the cost of a full collection is proportional to the total number of
-               long-lived objects, which is virtually unbounded.
-
-               Indeed, it has been remarked that doing a full collection every
-               <constant number> of object creations entails a dramatic performance
-               degradation in workloads which consist in creating and storing lots of
-               long-lived objects (e.g. building a large list of GC-tracked objects would
-               show quadratic performance, instead of linear as expected: see issue #4074).
-
-               Using the above ratio, instead, yields amortized linear performance in
-               the total number of objects (the effect of which can be summarized
-               thusly: "each full garbage collection is more and more costly as the
-               number of objects grows, but we do fewer and fewer of them").
-
-               This heuristic was suggested by Martin von Löwis on python-dev in
-               June 2008. His original analysis and proposal can be found at:
-               http://mail.python.org/pipermail/python-dev/2008-June/080579.html
-            */
-            if (i == NUM_GENERATIONS - 1
-                && gcstate->long_lived_pending < gcstate->long_lived_total / 4)
-                continue;
-            n = collect_with_callback(tstate, i);
-            break;
-        }
-    }
-    return n;
 }
 
 #include "clinic/gcmodule.c.h"
@@ -2151,7 +2095,7 @@ Py_ssize_t
 _PyGC_CollectNoFail(void)
 {
     GC_gcollect();
-    return n;
+    return 0;
 }
 
 void
@@ -2164,21 +2108,6 @@ void
 _PyGC_Fini(PyThreadState *tstate)
 {
 }
-
-
-#ifdef Py_DEBUG
-static int
-visit_validate(PyObject *op, void *parent_raw)
-{
-    PyObject *parent = _PyObject_CAST(parent_raw);
-    if (_PyObject_IsFreed(op)) {
-        _PyObject_ASSERT_FAILED_MSG(parent,
-                                    "PyObject_GC_Track() object is not valid");
-    }
-    return 0;
-}
-#endif
-
 
 /* extension modules might be compiled with GC support so these
    functions must always be available */
@@ -2196,7 +2125,6 @@ PyObject_GC_UnTrack(void *op_raw)
 static PyObject *
 _PyObject_GC_Alloc(int use_calloc, size_t size)
 {
-    struct _gc_runtime_state *state = &_PyRuntime.gc;
     PyObject *op;
     if (use_calloc)
         op = PyObject_Calloc(1, size);
