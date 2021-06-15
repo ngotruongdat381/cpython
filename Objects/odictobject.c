@@ -1595,7 +1595,7 @@ odict_init(PyObject *self, PyObject *args, PyObject *kwds)
 /* PyODict_Type */
 
 PyTypeObject PyODict_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "collections.OrderedDict",                  /* tp_name */
     sizeof(PyODictObject),                      /* tp_basicsize */
     0,                                          /* tp_itemsize */
@@ -1871,7 +1871,7 @@ static PyMethodDef odictiter_methods[] = {
 };
 
 PyTypeObject PyODictIter_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "odict_iterator",                         /* tp_name */
     sizeof(odictiterobject),                  /* tp_basicsize */
     0,                                        /* tp_itemsize */
@@ -1965,7 +1965,7 @@ static PyMethodDef odictkeys_methods[] = {
 };
 
 PyTypeObject PyODictKeys_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "odict_keys",                             /* tp_name */
     0,                                        /* tp_basicsize */
     0,                                        /* tp_itemsize */
@@ -2032,7 +2032,7 @@ static PyMethodDef odictitems_methods[] = {
 };
 
 PyTypeObject PyODictItems_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "odict_items",                            /* tp_name */
     0,                                        /* tp_basicsize */
     0,                                        /* tp_itemsize */
@@ -2099,7 +2099,7 @@ static PyMethodDef odictvalues_methods[] = {
 };
 
 PyTypeObject PyODictValues_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "odict_values",                           /* tp_name */
     0,                                        /* tp_basicsize */
     0,                                        /* tp_itemsize */

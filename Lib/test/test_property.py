@@ -1,6 +1,7 @@
 # Test case for property
 # more tests are in test_descr
 
+import gc
 import sys
 import unittest
 from test import support

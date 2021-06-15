@@ -3020,7 +3020,7 @@ static PyMappingMethods list_as_mapping = {
 };
 
 PyTypeObject PyList_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "list",
     sizeof(PyListObject),
     0,
@@ -3091,7 +3091,7 @@ static PyMethodDef listiter_methods[] = {
 };
 
 PyTypeObject PyListIter_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "list_iterator",                            /* tp_name */
     sizeof(listiterobject),                     /* tp_basicsize */
     0,                                          /* tp_itemsize */
@@ -3239,7 +3239,7 @@ static PyMethodDef listreviter_methods[] = {
 };
 
 PyTypeObject PyListRevIter_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "list_reverseiterator",                     /* tp_name */
     sizeof(listreviterobject),                  /* tp_basicsize */
     0,                                          /* tp_itemsize */

@@ -1772,7 +1772,7 @@ def refcount_test(test):
     unexpected refcounts caused by the trace function.
 
     """
-    return no_tracing(cpython_only(test))
+    return no_tracing(cpython_only(test)) and not hasattr(gc, "is_immortal")
 
 
 def _filter_suite(suite, pred):

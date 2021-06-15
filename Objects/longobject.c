@@ -42,7 +42,9 @@ get_small_int(sdigit ival)
     assert(IS_SMALL_INT(ival));
     PyThreadState *tstate = _PyThreadState_GET();
     PyObject *v = (PyObject*)tstate->interp->small_ints[ival + NSMALLNEGINTS];
+#ifndef Py_IMMORTAL_OBJECTS
     Py_INCREF(v);
+#endif  /* Py_IMMORTAL_OBJECTS */
     return v;
 }
 
@@ -5670,7 +5672,7 @@ static PyNumberMethods long_as_number = {
 };
 
 PyTypeObject PyLong_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_IMMORTAL_INIT(&PyType_Type, 0)
     "int",                                      /* tp_name */
     offsetof(PyLongObject, ob_digit),           /* tp_basicsize */
     sizeof(digit),                              /* tp_itemsize */
@@ -5765,6 +5767,9 @@ _PyLong_Init(PyThreadState *tstate)
             return -1;
         }
 
+#ifdef Py_IMMORTAL_OBJECTS
+        _Py_SET_REFCNT((PyObject *)v, _Py_IMMORTAL_BIT);
+#endif  /* Py_IMMORTAL_OBJECTS */
         Py_SET_SIZE(v, size);
         v->ob_digit[0] = (digit)abs(ival);
 
